@@ -2,11 +2,11 @@
 
 import httplib
 import urllib
+import urllib2
 try:
     import json
 except ImportError:
     import simplejson as json
-
 
 SERVER = 'go.urbanairship.com'
 BASE_URL = "https://go.urbanairship.com/api"
@@ -76,18 +76,22 @@ class Airship(object):
         self.auth_string = ('%s:%s' % (key, secret)).encode('base64')[:-1]
 
     def _request(self, method, body, url, content_type=None):
-        h = httplib.HTTPSConnection(SERVER)
         headers = {
             'authorization': 'Basic %s' % self.auth_string,
         }
         if content_type:
             headers['content-type'] = content_type
-        h.request(method, url, body=body, headers=headers)
-        resp = h.getresponse()
-        if resp.status == 401:
-            raise Unauthorized
-
-        return resp.status, resp.read()
+        req = urllib2.Request(url,headers=headers)	
+	req.get_method = lambda: method
+	req.add_data(body)
+	try:
+	    resp = urllib2.urlopen(req)
+	except urllib2.HTTPError, e:
+	    if e.code == 401:
+	        raise Unauthorized
+            else:
+	        raise e
+        return resp.code, resp.read()
 
     def register(self, device_token, alias=None, tags=None, badge=None):
         """Register the device token with UA."""
