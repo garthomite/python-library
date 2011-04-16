@@ -11,6 +11,7 @@ except ImportError:
 SERVER = 'go.urbanairship.com'
 BASE_URL = "https://go.urbanairship.com/api"
 DEVICE_TOKEN_URL = BASE_URL + '/device_tokens/'
+APIDS = BASE_URL + '/apids/'
 PUSH_URL = BASE_URL + '/push/'
 BATCH_PUSH_URL = BASE_URL + '/push/batch/'
 BROADCAST_URL = BASE_URL + '/push/broadcast/'
@@ -93,16 +94,21 @@ class Airship(object):
 	        raise e
         return resp.code, resp.read()
 
-    def register(self, device_token, alias=None, tags=None, badge=None):
+    def register(self, device_token=None, alias=None, tags=None, badge=None,apid=None):
         """Register the device token with UA."""
-        url = DEVICE_TOKEN_URL + device_token
+        url = None
         payload = {}
+        if apid:
+            url = APIDS + apid
+        else:
+            url = DEVICE_TOKEN_URL + device_token
+            if badge is not None:
+                payload['badge'] = badge
+        
         if alias is not None:
             payload['alias'] = alias
         if tags is not None:
             payload['tags'] = tags
-        if badge is not None:
-            payload['badge'] = badge
         if payload:
             body = json.dumps(payload)
             content_type = 'application/json'
@@ -115,9 +121,13 @@ class Airship(object):
             raise AirshipFailure(status, response)
         return status == 201
 
-    def deregister(self, device_token):
+    def deregister(self, device_token=None,apid=None):
         """Mark this device token as inactive"""
-        url = DEVICE_TOKEN_URL + device_token
+        url = None
+        if apid:
+            url = APIDS + apid
+        else:
+            url = DEVICE_TOKEN_URL + device_token
         status, response = self._request('DELETE', '', url, None)
         if status != 204:
             raise AirshipFailure(status, response)
